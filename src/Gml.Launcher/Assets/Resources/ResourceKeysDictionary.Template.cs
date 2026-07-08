@@ -48,4 +48,9 @@ public static class ResourceKeysDictionary
     public const string Host = "{{HOST}}";
     public const string SecondaryHost = "{{HOST_SECONDARY}}";
     public const string FolderName = "{{FOLDER_NAME}}";
+
+    // site_wisilymine — прямой контракт /api/launcher/* (cookie-based JWT). Не подстановочное
+    // значение (в отличие от Host/FolderName выше) — это WisilyMine-специфичный сайт, не
+    // параметр сборки, поэтому фиксируем его тут напрямую.
+    public const string SiteUrl = "https://wisilymine.fun";
 }

@@ -40,6 +40,21 @@
                     Converter={converters:SumServersOnlineConverter}}"
                     VerticalAlignment="Center" />
 
+                <StackPanel Grid.Row="0"
+                            Grid.Column="2"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Spacing="10">
+
+                    <components:BadgeComponent Text="VIP"
+                                              IsVisible="{Binding HasActiveVip}"
+                                              Foreground="{DynamicResource PrimaryColor}" />
+
+                    <components:BadgeComponent Text="{Binding WhitelistStatus}" />
+
+                </StackPanel>
+
                 <components:ProgressBar Grid.Row="0"
                                         Grid.Column="0"
                                         Grid.ColumnSpan="3"
@@ -98,30 +113,46 @@
                     <components:GmlButton Grid.Column="0"
                                           IconPath="/Assets/Images/document.svg"
                                           Command="{Binding OpenLinkCommand}"
-                                          CommandParameter="https://vk.com/recloud.studio"
+                                          CommandParameter="https://wisilymine.fun/updates"
                                           IconSize="22"
                                           Classes="TextIcon Additional"
-                                          Text="{x:Static lang:Resources.ModsList}" />
+                                          Text="Обновления" />
 
                     <StackPanel Grid.Column="2"
                                 Orientation="Horizontal"
                                 Spacing="10">
 
-                        <components:GmlButton IconPath="/Assets/Images/vk.svg"
-                                              IconSize="24"
-                                              Padding="0, 2, 0, 0"
+                        <components:GmlButton IconPath="/Assets/Images/map.svg"
+                                              IconSize="20"
                                               Command="{Binding OpenLinkCommand}"
-                                              CommandParameter="https://vk.com/recloud.studio"
-                                              Classes="Icon Additional"
-                                              Text="{x:Static lang:Resources.Website}" />
-
-                        <components:GmlButton IconPath="/Assets/Images/app.svg"
-                                              IconSize="22"
-                                              Command="{Binding OpenLinkCommand}"
-                                              CommandParameter="https://recloud.tech"
+                                              CommandParameter="https://wisilymine.fun/map"
                                               Padding="15, 0, 15, 0"
                                               Classes="TextIcon Additional"
-                                              Text="{x:Static lang:Resources.Website}" />
+                                              Text="Карта" />
+
+                        <components:GmlButton IconPath="/Assets/Images/wiki.svg"
+                                              IconSize="20"
+                                              Command="{Binding OpenLinkCommand}"
+                                              CommandParameter="https://wisilymine.fun/wiki"
+                                              Padding="15, 0, 15, 0"
+                                              Classes="TextIcon Additional"
+                                              Text="Вики" />
+
+                        <components:GmlButton IconPath="/Assets/Images/shop.svg"
+                                              IconSize="20"
+                                              Command="{Binding OpenLinkCommand}"
+                                              CommandParameter="https://wisilymine.fun/shop"
+                                              Padding="15, 0, 15, 0"
+                                              Classes="TextIcon Additional"
+                                              Text="Магазин" />
+
+                        <components:GmlButton IconPath="/Assets/Images/discord.svg"
+                                              IconSize="20"
+                                              Padding="0, 2, 0, 0"
+                                              Command="{Binding OpenLinkCommand}"
+                                              CommandParameter="https://discord.gg/wisilymine"
+                                              Classes="Icon Additional"
+                                              Text="Discord" />
 
                     </StackPanel>
 

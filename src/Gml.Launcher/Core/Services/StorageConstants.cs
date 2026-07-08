@@ -6,4 +6,5 @@ public static class StorageConstants
     public const string Settings = "Settings";
     public const string LastSelectedProfileName = "LastSelectedProfile";
     public const string InstallationDirectory = "InstallationDirectory";
+    public const string SiteAuthToken = "SiteAuthToken";
 }

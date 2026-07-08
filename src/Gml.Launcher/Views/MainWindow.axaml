@@ -24,7 +24,7 @@
         TransparencyLevelHint="AcrylicBlur"
         TransparencyBackgroundFallback="Transparent"
         Icon="/Assets/Images/logo.ico"
-        Title="Gml.Launcher">
+        Title="WisilyMine">
 
     <Grid>
         <Border CornerRadius="5" ClipToBounds="True">

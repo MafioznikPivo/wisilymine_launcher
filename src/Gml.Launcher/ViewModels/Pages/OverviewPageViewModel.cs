@@ -56,6 +56,7 @@ public class OverviewPageViewModel : PageViewModelBase
     private readonly ISystemService _systemService;
     private readonly IBackendChecker _backendChecker;
     private readonly ISettingsService _settingsService;
+    private readonly ISiteAuthService _siteAuthService;
     private readonly IDisposable? _speedSubscription;
 
     internal OverviewPageViewModel(IScreen screen,
@@ -66,6 +67,7 @@ public class OverviewPageViewModel : PageViewModelBase
         IStorageService? storageService = null,
         ISettingsService? settingsService = null,
         IBackendChecker? backendChecker = null,
+        ISiteAuthService? siteAuthService = null,
         LogHandler? logHandler = null) : base(screen)
     {
         _mainViewModel = screen as MainWindowViewModel ?? throw new Exception("Not valid screen");
@@ -95,6 +97,10 @@ public class OverviewPageViewModel : PageViewModelBase
         _settingsService = settingsService
                            ?? Locator.Current.GetService<ISettingsService>()
                            ?? throw new ServiceNotFoundException(typeof(ISettingsService));
+
+        _siteAuthService = siteAuthService
+                           ?? Locator.Current.GetService<ISiteAuthService>()
+                           ?? throw new ServiceNotFoundException(typeof(ISiteAuthService));
 
         GoProfileCommand = ReactiveCommand.CreateFromObservable(
             () => screen.Router.Navigate.Execute(new ProfilePageViewModel(screen, User, _gmlManager))
@@ -237,6 +243,13 @@ public class OverviewPageViewModel : PageViewModelBase
 
     [Reactive] public ObservableCollection<NewsReadDto> News { get; set; } = [];
 
+    [Reactive] public string WhitelistStatus { get; set; } = "Вайтлист: на рассмотрении";
+    [Reactive] public bool HasActiveVip { get; set; }
+    [Reactive] public bool ServerOnline { get; set; }
+    [Reactive] public double ServerTps { get; set; }
+    [Reactive] public int ServerPlayersOnline { get; set; }
+    [Reactive] public int ServerPlayersMax { get; set; }
+
     private async void LoadProfilesAsync(bool eventInfo)
     {
         await LoadProfiles();
@@ -293,7 +306,9 @@ public class OverviewPageViewModel : PageViewModelBase
     {
         return Dispatcher.UIThread.InvokeAsync(async () =>
         {
+            await _siteAuthService.LogoutAsync();
             await _storageService.SetAsync<IUser?>(StorageConstants.User, null);
+            await _storageService.SetAsync<string?>(StorageConstants.SiteAuthToken, null);
             _mainViewModel.Router.Navigate.Execute(new LoginPageViewModel(_mainViewModel, _onClosed));
         });
     }
@@ -488,6 +503,7 @@ public class OverviewPageViewModel : PageViewModelBase
 
             if (!_backendChecker.IsOffline)
             {
+                await LoadWisilyMineStatus();
                 await _gmlManager.LoadDiscordRpc();
                 await _gmlManager.UpdateDiscordRpcState(
                     LocalizationService.GetString(SystemConstants.DefaultDRpcText));
@@ -556,6 +572,31 @@ public class OverviewPageViewModel : PageViewModelBase
         catch (Exception e)
         {
             Console.WriteLine(e);
+        }
+    }
+
+    private async Task LoadWisilyMineStatus()
+    {
+        var me = await _siteAuthService.GetMeAsync();
+        if (me is not null)
+        {
+            WhitelistStatus = me.WhitelistStatus switch
+            {
+                "approved" => "Вайтлист: одобрено",
+                "rejected" => "Вайтлист: отклонено",
+                "pending" => "Вайтлист: на рассмотрении",
+                _ => "Вайтлист: заявка не подана"
+            };
+            HasActiveVip = me.IsVip;
+        }
+
+        var serverStatus = await _siteAuthService.GetServerStatusAsync();
+        if (serverStatus is not null)
+        {
+            ServerOnline = serverStatus.Online;
+            ServerTps = serverStatus.Tps;
+            ServerPlayersOnline = serverStatus.PlayersOnline;
+            ServerPlayersMax = serverStatus.PlayersMax;
         }
     }
 

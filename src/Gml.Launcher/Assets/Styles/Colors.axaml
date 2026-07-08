@@ -1,25 +1,25 @@
 ﻿<ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <SolidColorBrush x:Key="PrimaryColor">#008C45</SolidColorBrush>
-    <SolidColorBrush x:Key="PrimaryColorHover">#01763B</SolidColorBrush>
-    <SolidColorBrush x:Key="PrimaryTransparentColor">#101412</SolidColorBrush>
+    <SolidColorBrush x:Key="PrimaryColor">#1FA45A</SolidColorBrush>
+    <SolidColorBrush x:Key="PrimaryColorHover">#188A4A</SolidColorBrush>
+    <SolidColorBrush x:Key="PrimaryTransparentColor">#0C120C</SolidColorBrush>
 
     <SolidColorBrush x:Key="HeadlineColor">#FFFFFF</SolidColorBrush>
-    <SolidColorBrush x:Key="ContentColor">#969696</SolidColorBrush>
+    <SolidColorBrush x:Key="ContentColor">#9AA79A</SolidColorBrush>
 
-    <SolidColorBrush x:Key="BackgroundColor">#0E0E0E</SolidColorBrush>
+    <SolidColorBrush x:Key="BackgroundColor">#080D08</SolidColorBrush>
 
-    <SolidColorBrush x:Key="FrameBackgroundColor">#111111</SolidColorBrush>
-    <SolidColorBrush x:Key="FrameBackgroundBorderColor">#2E2E2E</SolidColorBrush>
+    <SolidColorBrush x:Key="FrameBackgroundColor">#0D130D</SolidColorBrush>
+    <SolidColorBrush x:Key="FrameBackgroundBorderColor">#22301F</SolidColorBrush>
 
-    <SolidColorBrush x:Key="SecondaryColor">#060B0D</SolidColorBrush>
-    <SolidColorBrush x:Key="SecondaryColorHover">#131719</SolidColorBrush>
+    <SolidColorBrush x:Key="SecondaryColor">#060906</SolidColorBrush>
+    <SolidColorBrush x:Key="SecondaryColorHover">#101710</SolidColorBrush>
 
-    <SolidColorBrush x:Key="FormBackgroundColor">#151515</SolidColorBrush>
-    <SolidColorBrush x:Key="FormBackgroundHoverColor">#1C1C1C</SolidColorBrush>
-    <SolidColorBrush x:Key="FormBorderColor">#212121</SolidColorBrush>
-    <SolidColorBrush x:Key="FormBorderHoverColor">#2C2C2C</SolidColorBrush>
+    <SolidColorBrush x:Key="FormBackgroundColor">#0F150F</SolidColorBrush>
+    <SolidColorBrush x:Key="FormBackgroundHoverColor">#161D16</SolidColorBrush>
+    <SolidColorBrush x:Key="FormBorderColor">#1B241A</SolidColorBrush>
+    <SolidColorBrush x:Key="FormBorderHoverColor">#243024</SolidColorBrush>
 
 
     <SolidColorBrush x:Key="BadgeBorder">#20FFFFFF</SolidColorBrush>
@@ -27,23 +27,23 @@
     <LinearGradientBrush x:Key="ProfileLinearGradient" StartPoint="0%, 0%" EndPoint="0%, 100%" Opacity=".3">
         <LinearGradientBrush.GradientStops>
             <GradientStop Offset="0" Color="Transparent" />
-            <GradientStop Offset="0.2" Color="#10018A44" />
-            <GradientStop Offset="1" Color="#018A44" />
+            <GradientStop Offset="0.2" Color="#100D2818" />
+            <GradientStop Offset="1" Color="#0D2818" />
         </LinearGradientBrush.GradientStops>
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="ProfileImageLinearGradient" StartPoint="50%, -80%" EndPoint="50%, 100%" Opacity=".2">
         <LinearGradientBrush.GradientStops>
-            <GradientStop Offset="0" Color="#111111" />
-            <GradientStop Offset="1" Color="#111111" />
+            <GradientStop Offset="0" Color="#0D130D" />
+            <GradientStop Offset="1" Color="#0D130D" />
         </LinearGradientBrush.GradientStops>
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="BackgroundOverlay" StartPoint="50%, -80%" EndPoint="50%, 100%" Opacity=".9">
         <LinearGradientBrush.GradientStops>
             <GradientStop Offset="0" Color="Transparent" />
-            <GradientStop Offset="0.3" Color="#0E0E0E" />
-            <GradientStop Offset="1" Color="#0E0E0E" />
+            <GradientStop Offset="0.3" Color="#080D08" />
+            <GradientStop Offset="1" Color="#080D08" />
         </LinearGradientBrush.GradientStops>
     </LinearGradientBrush>
 

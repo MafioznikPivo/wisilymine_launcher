@@ -695,6 +695,22 @@ namespace Gml.Launcher.Assets.Resources {
         /// <summary>
         ///   Ищет локализованную строку, похожую на Window size.
         /// </summary>
+        public static string TwoFactorResend {
+            get {
+                return ResourceManager.GetString("TwoFactorResend", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Window size.
+        /// </summary>
+        public static string TwoFactorExpired {
+            get {
+                return ResourceManager.GetString("TwoFactorExpired", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Window size.
+        /// </summary>
         public static string Reinstall {
             get {
                 return ResourceManager.GetString("Reinstall", resourceCulture);

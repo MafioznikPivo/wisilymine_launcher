@@ -113,6 +113,17 @@
                                       FontWeight="Bold"
                                       Text="Подтвердить" />
 
+                <TextBlock HorizontalAlignment="Center"
+                           Classes="FormText"
+                           IsVisible="{Binding !CanResendCode}"
+                           Text="{Binding TwoFaSecondsLeft, StringFormat='Повторно можно через {0} сек.'}" />
+
+                <components:GmlButton Command="{Binding ResendCodeCommand}"
+                                      HorizontalAlignment="Center"
+                                      IsVisible="{Binding CanResendCode}"
+                                      Classes="Text Additional"
+                                      Text="{x:Static lang:Resources.TwoFactorResend}" />
+
                 <ProgressBar IsIndeterminate="{Binding IsProcessing}"
                              Classes="ProgressBar"
                              IsVisible="{Binding IsProcessing}"

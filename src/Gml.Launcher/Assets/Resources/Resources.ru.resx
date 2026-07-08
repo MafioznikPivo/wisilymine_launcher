@@ -323,10 +323,16 @@
     <value>Сервер не отвечает</value>
   </data>
   <data name="TwoFactorTitle" xml:space="preserve">
-    <value>2FA аутентификация</value>
+    <value>Подтверждение входа</value>
   </data>
   <data name="TwoFactorDescription" xml:space="preserve">
-    <value>Пожалуйста, введите код подтверждения из вашего приложения аутентификации</value>
+    <value>Код отправлен в Telegram. Действителен 10 минут.</value>
+  </data>
+  <data name="TwoFactorResend" xml:space="preserve">
+    <value>Отправить код повторно</value>
+  </data>
+  <data name="TwoFactorExpired" xml:space="preserve">
+    <value>Код истёк, запросите новый</value>
   </data>
   <data name="Reinstall" xml:space="preserve">
     <value>Переустановить</value>

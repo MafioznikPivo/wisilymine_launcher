@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Concurrency;
+using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -25,11 +26,13 @@ namespace Gml.Launcher.ViewModels.Pages;
 public class LoginPageViewModel : PageViewModelBase
 {
     private readonly IGmlClientManager _gmlClientManager;
+    private readonly ISiteAuthService _siteAuthService;
     private readonly IObservable<bool> _onClosed;
     private readonly MainWindowViewModel _screen;
     private readonly IBackendChecker _backendChecker;
     private readonly IStorageService _storageService;
     private readonly ISystemService _systemService;
+    private IDisposable? _twoFaCountdown;
     private ObservableCollection<string> _errorList = [];
     private bool _isProcessing;
 
@@ -39,6 +42,7 @@ public class LoginPageViewModel : PageViewModelBase
         IStorageService? storageService = null,
         ISystemService? systemService = null,
         IBackendChecker? backendChecker = null,
+        ISiteAuthService? siteAuthService = null,
         ILocalizationService? localizationService = null) : base(screen, localizationService)
     {
         _screen = (MainWindowViewModel)screen;
@@ -60,11 +64,16 @@ public class LoginPageViewModel : PageViewModelBase
                           ?? Locator.Current.GetService<IBackendChecker>()
                           ?? throw new ServiceNotFoundException(typeof(IBackendChecker));
 
+        _siteAuthService = siteAuthService
+                           ?? Locator.Current.GetService<ISiteAuthService>()
+                           ?? throw new ServiceNotFoundException(typeof(ISiteAuthService));
+
 
         _screen.OnClosed.Subscribe(DisposeConnections);
 
         LoginCommand = ReactiveCommand.CreateFromTask(OnAuth);
         Verify2FaCommand = ReactiveCommand.CreateFromTask(OnVerify2Fa);
+        ResendCodeCommand = ReactiveCommand.CreateFromTask(OnResendCode);
 
         RxApp.MainThreadScheduler.Schedule(CheckAuth);
     }
@@ -73,6 +82,8 @@ public class LoginPageViewModel : PageViewModelBase
     [Reactive] public string Password { get; set; }
     [Reactive] public string TwoFactorCode { get; set; }
     [Reactive] public bool Is2FaVisible { get; set; }
+    [Reactive] public int TwoFaSecondsLeft { get; set; }
+    [Reactive] public bool CanResendCode { get; set; }
 
     public bool IsProcessing
     {
@@ -96,21 +107,60 @@ public class LoginPageViewModel : PageViewModelBase
 
     public ICommand LoginCommand { get; set; }
     public ICommand Verify2FaCommand { get; set; }
+    public ICommand ResendCodeCommand { get; set; }
 
     private void DisposeConnections(bool isClosed)
     {
+        _twoFaCountdown?.Dispose();
         _gmlClientManager.Dispose();
     }
 
     private async void CheckAuth()
     {
-        var authUser = await _storageService.GetAsync<AuthLauncherUser>(StorageConstants.User);
+        var savedToken = TokenProtector.Unprotect(await _storageService.GetAsync<string>(StorageConstants.SiteAuthToken));
 
-        if (authUser is { IsAuth: true } && authUser.ExpiredDate > DateTime.Now)
+        if (string.IsNullOrEmpty(savedToken))
+            return;
+
+        _siteAuthService.SetAuthToken(savedToken);
+        var me = await _siteAuthService.GetMeAsync();
+
+        if (me is null)
         {
-            _screen.Router.Navigate.Execute(new OverviewPageViewModel(_screen, authUser, _onClosed));
-            await _gmlClientManager.OpenServerConnection(authUser);
+            // Токен истёк/отозван (logout-all) — остаёмся на экране логина.
+            await _storageService.SetAsync<string?>(StorageConstants.SiteAuthToken, null);
+            return;
         }
+
+        var authUser = BuildAuthUser(me, savedToken);
+        await _storageService.SetAsync(StorageConstants.User, authUser);
+        _screen.Router.Navigate.Execute(new OverviewPageViewModel(_screen, authUser, _onClosed));
+        await _gmlClientManager.OpenServerConnection(authUser);
+    }
+
+    private static AuthLauncherUser BuildAuthUser(SiteMeResult me, string token) => new()
+    {
+        Name = me.McNick,
+        AccessToken = token,
+        Uuid = string.Empty,
+        ExpiredDate = DateTime.Now.AddDays(30),
+        IsAuth = true,
+        Has2Fa = false
+    };
+
+    private void StartTwoFaCountdown(int seconds)
+    {
+        _twoFaCountdown?.Dispose();
+        TwoFaSecondsLeft = seconds;
+        CanResendCode = false;
+
+        _twoFaCountdown = Observable.Interval(TimeSpan.FromSeconds(1))
+            .ObserveOn(RxApp.MainThreadScheduler)
+            .Subscribe(_ =>
+            {
+                TwoFaSecondsLeft = Math.Max(0, TwoFaSecondsLeft - 1);
+                if (TwoFaSecondsLeft == 0) CanResendCode = true;
+            });
     }
 
     private async Task OnAuth(CancellationToken arg)
@@ -120,67 +170,27 @@ public class LoginPageViewModel : PageViewModelBase
             IsProcessing = true;
             Errors.Clear();
 
-            Debug.WriteLine("Starting authentication...");
-            var authInfo = await _gmlClientManager.Auth(Login, Password, _systemService.GetHwid());
-            Debug.WriteLine($"Auth response - IsAuth: {authInfo.User?.IsAuth}, Has2Fa: {authInfo.User?.Has2Fa}");
-            Debug.WriteLine($"Auth message: {authInfo.Message}");
-            Debug.WriteLine($"Auth details: {string.Join(", ", authInfo.Details)}");
+            var result = await _siteAuthService.LoginAsync(Login, Password);
 
-            // Проверяем, требуется ли 2FA по сообщению об ошибке
-            if (authInfo.User is not null && authInfo.User.Has2Fa)
+            if (result.Needs2Fa)
             {
-                Debug.WriteLine("2FA required based on error message");
                 Is2FaVisible = true;
                 TwoFactorCode = string.Empty;
+                StartTwoFaCountdown(600);
                 return;
             }
 
-            if (authInfo.User?.IsAuth == true)
+            if (result.Success)
             {
-                if (authInfo.User.Has2Fa)
-                {
-                    Debug.WriteLine("User has 2FA enabled, showing 2FA input");
-                    Is2FaVisible = true;
-                    TwoFactorCode = string.Empty;
-                    return;
-                }
-
-                Debug.WriteLine("Authentication successful, no 2FA required");
-                await _storageService.SetAsync(StorageConstants.User, authInfo.User);
-                _screen.Router.Navigate.Execute(new OverviewPageViewModel(_screen, authInfo.User, _onClosed));
+                await CompleteLogin();
                 return;
             }
 
-            Debug.WriteLine("Authentication failed");
-            if (_screen is { } mainView)
-            {
-                if (!authInfo.Details.Any())
-                    mainView.Manager
-                        .CreateMessage(true, "#D03E3E",
-                            LocalizationService.GetString(SystemConstants.InvalidAuthData),
-                            authInfo.Message)
-                        .Dismiss()
-                        .WithDelay(TimeSpan.FromSeconds(3))
-                        .Queue();
-
-                Errors = new ObservableCollection<string>(authInfo.Details);
-            }
+            ShowAuthError(result.Error ?? LocalizationService.GetString(SystemConstants.InvalidAuthData));
         }
         catch (Exception exception)
         {
-            Debug.WriteLine($"Authentication error: {exception}");
-            if (_screen is { } mainView)
-            {
-                mainView.Manager
-                    .CreateMessage(true, "#D03E3E",
-                        LocalizationService.GetString(SystemConstants.InvalidAuthData),
-                        exception.Message)
-                    .Dismiss()
-                    .WithDelay(TimeSpan.FromSeconds(3))
-                    .Queue();
-            }
-
-            Debug.WriteLine(exception);
+            ShowAuthError(exception.Message);
             SentrySdk.CaptureException(exception);
         }
         finally
@@ -196,62 +206,85 @@ public class LoginPageViewModel : PageViewModelBase
             IsProcessing = true;
             Errors.Clear();
 
-            Debug.WriteLine($"Verifying 2FA code: {TwoFactorCode}");
-            var authInfo = await _gmlClientManager.AuthWith2Fa(Login, Password, _systemService.GetHwid(), TwoFactorCode);
-            Debug.WriteLine($"2FA verification response - IsAuth: {authInfo.User?.IsAuth}, Has2Fa: {authInfo.User?.Has2Fa}");
-            Debug.WriteLine($"2FA verification message: {authInfo.Message}");
-            Debug.WriteLine($"2FA verification details: {string.Join(", ", authInfo.Details)}");
+            var result = await _siteAuthService.VerifyTwoFaAsync(TwoFactorCode);
 
-            if (authInfo.User?.IsAuth == true)
+            if (result.Success)
             {
-                Debug.WriteLine("2FA verification successful");
-                await _storageService.SetAsync(StorageConstants.User, authInfo.User);
-                Is2FaVisible = false; // Скрываем окно 2FA
-                _screen.Router.Navigate.Execute(new OverviewPageViewModel(_screen, authInfo.User, _onClosed));
+                _twoFaCountdown?.Dispose();
+                Is2FaVisible = false;
+                await CompleteLogin();
                 return;
             }
 
-            Debug.WriteLine("2FA verification failed");
-            if (_screen is { } mainView)
-            {
-                // Если код неверный, показываем ошибку, но оставляем окно 2FA открытым
-                mainView.Manager
-                    .CreateMessage(true, "#D03E3E",
-                        LocalizationService.GetString(SystemConstants.InvalidAuthData),
-                        authInfo.Message ?? "Invalid 2FA code")
-                    .Dismiss()
-                    .WithDelay(TimeSpan.FromSeconds(3))
-                    .Queue();
-
-                if (authInfo.Details.Any())
-                {
-                    Errors = new ObservableCollection<string>(authInfo.Details);
-                }
-
-                // Очищаем поле для ввода кода
-                TwoFactorCode = string.Empty;
-            }
+            TwoFactorCode = string.Empty;
+            var message = result.ErrorCode == "expired_code"
+                ? Gml.Launcher.Assets.Resources.Resources.TwoFactorExpired
+                : result.Error ?? LocalizationService.GetString(SystemConstants.InvalidAuthData);
+            ShowAuthError(message);
         }
         catch (Exception exception)
         {
-            Debug.WriteLine($"2FA verification error: {exception}");
-            if (_screen is { } mainView)
-            {
-                mainView.Manager
-                    .CreateMessage(true, "#D03E3E",
-                        LocalizationService.GetString(SystemConstants.InvalidAuthData),
-                        exception.Message)
-                    .Dismiss()
-                    .WithDelay(TimeSpan.FromSeconds(3))
-                    .Queue();
-            }
-
-            Debug.WriteLine(exception);
+            ShowAuthError(exception.Message);
             SentrySdk.CaptureException(exception);
         }
         finally
         {
             IsProcessing = false;
         }
+    }
+
+    private async Task OnResendCode(CancellationToken arg)
+    {
+        if (!CanResendCode) return;
+
+        try
+        {
+            IsProcessing = true;
+            var result = await _siteAuthService.ResendTwoFaAsync();
+
+            if (result.Success)
+            {
+                StartTwoFaCountdown(600);
+            }
+            else
+            {
+                ShowAuthError(result.Error ?? LocalizationService.GetString(SystemConstants.InvalidAuthData));
+            }
+        }
+        finally
+        {
+            IsProcessing = false;
+        }
+    }
+
+    private async Task CompleteLogin()
+    {
+        var token = _siteAuthService.GetAuthToken();
+        var me = await _siteAuthService.GetMeAsync();
+
+        if (token is null || me is null)
+        {
+            ShowAuthError(LocalizationService.GetString(SystemConstants.InvalidAuthData));
+            return;
+        }
+
+        await _storageService.SetAsync(StorageConstants.SiteAuthToken, TokenProtector.Protect(token));
+
+        var authUser = BuildAuthUser(me, token);
+        await _storageService.SetAsync(StorageConstants.User, authUser);
+        _screen.Router.Navigate.Execute(new OverviewPageViewModel(_screen, authUser, _onClosed));
+    }
+
+    private void ShowAuthError(string message)
+    {
+        if (_screen is not { } mainView) return;
+
+        mainView.Manager
+            .CreateMessage(true, "#D03E3E",
+                LocalizationService.GetString(SystemConstants.InvalidAuthData),
+                message)
+            .Dismiss()
+            .WithDelay(TimeSpan.FromSeconds(3))
+            .Queue();
     }
 }

@@ -34,6 +34,7 @@ public static class ServiceLocator
         CheckAndChangeLanguage(storageService, systemService);
         Locator.CurrentMutable.RegisterConstant(new VpnChecker(), typeof(IVpnChecker));
         Locator.CurrentMutable.RegisterConstant(new BackendChecker(), typeof(IBackendChecker));
+        Locator.CurrentMutable.RegisterConstant(new SiteAuthService(), typeof(ISiteAuthService));
         Locator.CurrentMutable.RegisterConstant(new SettingsService(
                 GetRequiredService<ISystemService>(),
                 GetRequiredService<IStorageService>()
